@@ -774,7 +774,8 @@ class IDHashable:
 
 
 
-from jax._src.lib import xla_bridge as xb
+#from jax._src.lib import xla_bridge as xb
+from jaxdax._src.lib import xla_bridge as xb
 from jax._src.lib import xla_client as xc
 xe = xc._xla
 xops = xc._xla.ops
@@ -785,6 +786,9 @@ def xla_call_impl(*args, jaxpr: Jaxpr, num_consts: int):
   execute = xla_callable(IDHashable(jaxpr), hashable_consts)
   return execute(*args)
 impl_rules[xla_call_p] = xla_call_impl
+
+backend_name = None
+backend_name = 'dax'
 
 @lru_cache()
 def xla_callable(hashable_jaxpr: IDHashable, hashable_consts: Tuple[IDHashable]):
@@ -797,7 +801,7 @@ def xla_callable(hashable_jaxpr: IDHashable, hashable_consts: Tuple[IDHashable])
   xla_params = _xla_params(c, in_avals)
   outs = jaxpr_subcomp(c, jaxpr, xla_consts + xla_params)
   out = xops.Tuple(c, outs)
-  compiled = xb.get_backend(None).compile(c.build(out))
+  compiled = xb.get_backend(backend_name).compile(c.build(out))
   return partial(execute_compiled, compiled, [v.aval for v in jaxpr.outs])
 
 def _xla_consts(c: xe.XlaBuilder, consts: List[Any]) -> List[xe.XlaOp]:
@@ -838,7 +842,7 @@ def execute_compiled(compiled, out_avals, *args):
   out_bufs = compiled.execute(input_bufs)
   return [handle_result(aval, buf) for aval, buf in zip(out_avals, out_bufs)]
 
-default_input_handler = xb.get_backend(None).buffer_from_pyval
+default_input_handler = xb.get_backend(backend_name).buffer_from_pyval
 input_handlers = {ty: default_input_handler for ty in
                   [bool, int, float, np.ndarray, np.float64, np.float32]}
 
